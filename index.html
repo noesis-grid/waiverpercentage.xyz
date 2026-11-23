@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settlement Desk — Loan Waiver & Settlement Calculator</title>
+  <!-- Tailwind CSS CDN for rapid, responsive, utility-first styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Inter font with clean system-ui fallbacks -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* Base typography and crisp rendering */
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Tabular numbers prevent horizontal jitter while typing or dragging sliders */
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Hide default number input spinners for a cleaner fintech input look */
+    input[type='number']::-webkit-inner-spin-button,
+    input[type='number']::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type='number'] {
+      -moz-appearance: textfield;
+    }
+
+    /* Custom minimalist range slider styled in deep teal */
+    input[type='range'].settlement-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 9999px;
+      background: #e2e8f0;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type='range'].settlement-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 9999px;
+      background: #0f766e;
+      border: 3px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
+      transition: transform 0.12s ease, background-color 0.12s ease;
+    }
+
+    input[type='range'].settlement-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+      background: #115e59;
+    }
+
+    input[type='range'].settlement-slider::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 9999px;
+      background: #0f766e;
+      border: 3px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
+      transition: transform 0.12s ease, background-color 0.12s ease;
+    }
+
+    input[type='range'].settlement-slider::-moz-range-thumb:hover {
+      transform: scale(1.1);
+      background: #115e59;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-teal-100 selection:text-teal-900">
+
+  <!-- Top Minimalist Header -->
+  <header class="bg-white border-b border-slate-200/80 sticky top-0 z-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <!-- Minimal geometric logo mark -->
+        <div class="w-8 h-8 rounded-lg bg-teal-700 text-white flex items-center justify-center shrink-0 shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <div class="truncate">
+          <h1 class="text-sm sm:text-base font-semibold text-slate-900 tracking-tight truncate">
+            Loan Waiver &amp; Settlement Calculator
+          </h1>
+        </div>
+      </div>
+
+      <!-- Header Quick Actions -->
+      <div class="flex items-center gap-2 shrink-0">
+        <button
+          id="btn-reset"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98] transition"
+          title="Reset to default values"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>Reset</span>
+        </button>
+
+        <button
+          id="btn-copy"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs sm:text-sm font-medium text-white bg-teal-700 border border-teal-700 rounded-lg hover:bg-teal-800 active:scale-[0.98] shadow-sm transition"
+        >
+          <svg id="icon-copy" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          <svg id="icon-check" class="w-3.5 h-3.5 hidden" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          <span id="copy-label">Copy Quote</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 flex-1">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- LEFT COLUMN: Primary Input + Bidirectional Calculator -->
+      <section class="lg:col-span-7 space-y-5">
+
+        <!-- Card 1: Total Principal Outstanding -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 sm:p-6">
+          <div class="flex flex-wrap items-baseline justify-between gap-2 mb-2.5">
+            <label for="input-principal" class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Total Principal Outstanding
+            </label>
+            <span id="principal-formatted" class="text-xs font-medium text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full tabular-nums">
+              ₹1,00,000
+            </span>
+          </div>
+
+          <div class="relative">
+            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-xl font-semibold text-slate-400">
+              ₹
+            </span>
+            <input
+              id="input-principal"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="any"
+              value="100000"
+              placeholder="Enter principal outstanding"
+              class="w-full pl-9 pr-4 py-3 text-2xl sm:text-3xl font-bold text-slate-900 bg-slate-50/70 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 tabular-nums transition"
+            />
+          </div>
+
+          <!-- Quick Preset Chips -->
+          <div class="mt-3 flex flex-wrap items-center gap-1.5">
+            <span class="text-xs text-slate-400 mr-1">Quick set:</span>
+            <button type="button" data-preset="50000" class="preset-chip px-2.5 py-1 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-teal-50 hover:text-teal-800 rounded-lg transition tabular-nums">₹50K</button>
+            <button type="button" data-preset="100000" class="preset-chip px-2.5 py-1 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-teal-50 hover:text-teal-800 rounded-lg transition tabular-nums">₹1L</button>
+            <button type="button" data-preset="250000" class="preset-chip px-2.5 py-1 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-teal-50 hover:text-teal-800 rounded-lg transition tabular-nums">₹2.5L</button>
+            <button type="button" data-preset="500000" class="preset-chip px-2.5 py-1 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-teal-50 hover:text-teal-800 rounded-lg transition tabular-nums">₹5L</button>
+            <button type="button" data-preset="1000000" class="preset-chip px-2.5 py-1 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-teal-50 hover:text-teal-800 rounded-lg transition tabular-nums">₹10L</button>
+          </div>
+        </div>
+
+        <!-- Card 2: Bidirectional Live-Synced Calculator -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 sm:p-6 space-y-6">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm font-semibold text-slate-900">Settlement Terms</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Edit any field — all values stay live-synced.</p>
+            </div>
+            <!-- Status / Warning Badge -->
+            <span id="status-badge" class="hidden text-xs font-medium px-2.5 py-1 rounded-full"></span>
+          </div>
+
+          <!-- Discount / Waiver Percentage Input + Slider -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between gap-4">
+              <label for="input-discount" class="text-sm font-medium text-slate-700">
+                Discount / Waiver (%)
+              </label>
+              <div class="relative w-32">
+                <input
+                  id="input-discount"
+                  type="number"
+                  inputmode="decimal"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value="30"
+                  class="w-full pl-3 pr-8 py-1.5 text-right text-lg font-bold text-teal-800 bg-teal-50/50 border border-teal-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 tabular-nums transition"
+                />
+                <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-sm font-semibold text-teal-700">
+                  %
+                </span>
+              </div>
+            </div>
+
+            <div class="pt-1">
+              <input
+                id="slider-discount"
+                type="range"
+                min="0"
+                max="100"
+                step="0.5"
+                value="30"
+                aria-label="Discount percentage slider"
+                class="settlement-slider"
+              />
+              <div class="flex justify-between text-[11px] font-medium text-slate-400 mt-1.5 tabular-nums select-none">
+                <span>0%</span>
+                <span>25%</span>
+                <span>50%</span>
+                <span>75%</span>
+                <span>100%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Visual Split Bar (Payable vs Waiver) -->
+          <div class="space-y-1.5">
+            <div class="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
+              <div id="bar-payable" class="bg-slate-800 h-full transition-all duration-150" style="width: 70%;"></div>
+              <div id="bar-waiver" class="bg-teal-600 h-full transition-all duration-150" style="width: 30%;"></div>
+            </div>
+            <div class="flex justify-between text-[11px] font-medium text-slate-500 tabular-nums">
+              <span class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-slate-800 inline-block"></span>
+                Payable: <strong id="label-payable-pct" class="text-slate-700">70%</strong>
+              </span>
+              <span class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-teal-600 inline-block"></span>
+                Waiver: <strong id="label-waiver-pct" class="text-teal-700">30%</strong>
+              </span>
+            </div>
+          </div>
+
+          <!-- Two-Column Editable Money Fields: Final Payable & Waiver Amount -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+
+            <!-- Final Settlement Amount / Customer's Willingness to Pay -->
+            <div class="p-4 rounded-xl bg-slate-50/80 border border-slate-200/90 focus-within:bg-white focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-900/5 transition">
+              <div class="flex items-center justify-between gap-2 mb-1.5">
+                <label for="input-final" class="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                  Final Payable (Customer)
+                </label>
+              </div>
+              <div class="relative">
+                <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center text-lg font-semibold text-slate-400">
+                  ₹
+                </span>
+                <input
+                  id="input-final"
+                  type="number"
+                  inputmode="decimal"
+                  min="0"
+                  step="any"
+                  value="70000"
+                  class="w-full pl-5 pr-1 py-1 text-2xl font-bold text-slate-900 bg-transparent focus:outline-none tabular-nums"
+                />
+              </div>
+              <p id="final-formatted" class="text-xs text-slate-500 mt-1 tabular-nums">
+                ₹70,000
+              </p>
+            </div>
+
+            <!-- Waiver / Discount Amount Saved -->
+            <div class="p-4 rounded-xl bg-teal-50/40 border border-teal-200/70 focus-within:bg-white focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/10 transition">
+              <div class="flex items-center justify-between gap-2 mb-1.5">
+                <label for="input-waiver" class="text-xs font-semibold uppercase tracking-wider text-teal-800">
+                  Waiver / Savings
+                </label>
+              </div>
+              <div class="relative">
+                <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center text-lg font-semibold text-teal-600/70">
+                  ₹
+                </span>
+                <input
+                  id="input-waiver"
+                  type="number"
+                  inputmode="decimal"
+                  min="0"
+                  step="any"
+                  value="30000"
+                  class="w-full pl-5 pr-1 py-1 text-2xl font-bold text-teal-800 bg-transparent focus:outline-none tabular-nums"
+                />
+              </div>
+              <p id="waiver-formatted" class="text-xs text-teal-700/80 mt-1 tabular-nums">
+                ₹30,000 saved
+              </p>
+            </div>
+          </div>
+
+          <!-- Compact Inline Part-Payment Split -->
+          <div class="pt-4 border-t border-slate-100">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 block">
+                  Payment Plan
+                </span>
+                <p id="part-payment-summary" class="text-sm font-semibold text-slate-900 mt-0.5 tabular-nums">
+                  ₹70,000 <span class="text-xs font-normal text-slate-500">one-time lump sum</span>
+                </p>
+              </div>
+
+              <!-- Segmented Part Selector -->
+              <div class="inline-flex items-center bg-slate-100 p-1 rounded-xl self-start sm:self-auto" role="group" aria-label="Payment parts">
+                <button type="button" data-parts="1" class="part-btn px-2.5 py-1.5 text-xs font-semibold rounded-lg transition bg-white text-slate-900 shadow-sm">1x Lump</button>
+                <button type="button" data-parts="2" class="part-btn px-2.5 py-1.5 text-xs font-medium rounded-lg transition text-slate-600 hover:text-slate-900">2 mo</button>
+                <button type="button" data-parts="3" class="part-btn px-2.5 py-1.5 text-xs font-medium rounded-lg transition text-slate-600 hover:text-slate-900">3 mo</button>
+                <button type="button" data-parts="4" class="part-btn px-2.5 py-1.5 text-xs font-medium rounded-lg transition text-slate-600 hover:text-slate-900">4 mo</button>
+                <button type="button" data-parts="6" class="part-btn px-2.5 py-1.5 text-xs font-medium rounded-lg transition text-slate-600 hover:text-slate-900">6 mo</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT COLUMN: Pre-calculated 10% to 90% Discount Reference Table -->
+      <aside class="lg:col-span-5">
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+          <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm font-semibold text-slate-900">Quick Waiver Matrix</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Click any row to apply instantly</p>
+            </div>
+            <span class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">10% – 90%</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-100 bg-slate-50/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <th class="py-2.5 pl-5 pr-2">Discount</th>
+                  <th class="py-2.5 px-2 text-right">Waiver (₹)</th>
+                  <th class="py-2.5 pl-2 pr-5 text-right">Final Payable (₹)</th>
+                </tr>
+              </thead>
+              <tbody id="reference-table-body" class="divide-y divide-slate-100 text-sm tabular-nums">
+                <!-- Rows dynamically rendered by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <!-- Minimal Footer -->
+  <footer class="max-w-6xl w-full mx-auto px-4 sm:px-6 py-4 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
+    <span>Built for live NBFC &amp; bank settlement calls. All calculations run locally in your browser.</span>
+    <span class="tabular-nums">Format: INR (en-IN)</span>
+  </footer>
+
+  <!-- Toast Notification (for copy feedback, replaces alert()) -->
+  <div
+    id="toast"
+    role="status"
+    aria-live="polite"
+    class="fixed bottom-5 right-5 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs sm:text-sm font-medium shadow-lg opacity-0 translate-y-2 pointer-events-none transition-all duration-200"
+  >
+    <svg class="w-4 h-4 text-teal-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+    <span id="toast-message">Quote copied to clipboard</span>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // =========================================================================
+      // STATE
+      // =========================================================================
+      const DEFAULT_STATE = {
+        principal: 100000,
+        discountPct: 30,
+        finalAmount: 70000,
+        waiverAmount: 30000,
+        parts: 1
+      };
+
+      const state = { ...DEFAULT_STATE };
+      const REFERENCE_PERCENTS = [10, 20, 30, 40, 50, 60, 70, 80, 90];
+
+      // =========================================================================
+      // DOM ELEMENTS
+      // =========================================================================
+      const el = {
+        principalInput: document.getElementById('input-principal'),
+        principalFormatted: document.getElementById('principal-formatted'),
+        discountInput: document.getElementById('input-discount'),
+        discountSlider: document.getElementById('slider-discount'),
+        finalInput: document.getElementById('input-final'),
+        finalFormatted: document.getElementById('final-formatted'),
+        waiverInput: document.getElementById('input-waiver'),
+        waiverFormatted: document.getElementById('waiver-formatted'),
+        statusBadge: document.getElementById('status-badge'),
+        barPayable: document.getElementById('bar-payable'),
+        barWaiver: document.getElementById('bar-waiver'),
+        labelPayablePct: document.getElementById('label-payable-pct'),
+        labelWaiverPct: document.getElementById('label-waiver-pct'),
+        partSummary: document.getElementById('part-payment-summary'),
+        partButtons: document.querySelectorAll('.part-btn'),
+        presetChips: document.querySelectorAll('.preset-chip'),
+        tableBody: document.getElementById('reference-table-body'),
+        btnReset: document.getElementById('btn-reset'),
+        btnCopy: document.getElementById('btn-copy'),
+        copyLabel: document.getElementById('copy-label'),
+        iconCopy: document.getElementById('icon-copy'),
+        iconCheck: document.getElementById('icon-check'),
+        toast: document.getElementById('toast'),
+        toastMessage: document.getElementById('toast-message')
+      };
+
+      // =========================================================================
+      // FORMATTERS (Indian Numbering System en-IN)
+      // =========================================================================
+      const inrFormatter = new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        maximumFractionDigits: 0
+      });
+
+      const inrExactFormatter = new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      });
+
+      function formatINR(value, exact = false) {
+        if (!Number.isFinite(value)) return '₹0';
+        return exact ? inrExactFormatter.format(value) : inrFormatter.format(Math.round(value));
+      }
+
+      function roundTo(num, decimals = 2) {
+        const factor = Math.pow(10, decimals);
+        return Math.round((num + Number.EPSILON) * factor) / factor;
+      }
+
+      function parseNumericInput(raw) {
+        const parsed = parseFloat(raw);
+        return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+      }
+
+      // =========================================================================
+      // SYNC & CALCULATION LOGIC
+      // =========================================================================
+
+      /**
+       * Recalculates Final Amount and Waiver Amount from Principal and Discount %.
+       * @param {string} source - Which control triggered the update (to avoid overwriting active typing).
+       */
+      function syncFromDiscount(source) {
+        const p = Math.max(0, state.principal);
+        const d = Math.min(100, Math.max(0, state.discountPct));
+        state.discountPct = roundTo(d, 2);
+        state.waiverAmount = roundTo((p * state.discountPct) / 100, 2);
+        state.finalAmount = roundTo(p - state.waiverAmount, 2);
+        render(source);
+      }
+
+      /**
+       * Recalculates Discount % and Waiver Amount from Final Payable Amount.
+       */
+      function syncFromFinal() {
+        const p = Math.max(0, state.principal);
+        const f = Math.max(0, state.finalAmount);
+
+        if (p <= 0) {
+          state.discountPct = 0;
+          state.waiverAmount = 0;
+        } else if (f > p) {
+          // Customer entered an amount exceeding principal: clamp discount to 0% and show warning
+          state.discountPct = 0;
+          state.waiverAmount = 0;
+        } else {
+          state.waiverAmount = roundTo(p - f, 2);
+          state.discountPct = roundTo((state.waiverAmount / p) * 100, 2);
+        }
+        render('final');
+      }
+
+      /**
+       * Recalculates Discount % and Final Payable Amount from Waiver Amount.
+       */
+      function syncFromWaiver() {
+        const p = Math.max(0, state.principal);
+        const w = Math.max(0, state.waiverAmount);
+
+        if (p <= 0) {
+          state.discountPct = 0;
+          state.finalAmount = 0;
+        } else if (w > p) {
+          state.discountPct = 100;
+          state.finalAmount = 0;
+        } else {
+          state.finalAmount = roundTo(p - w, 2);
+          state.discountPct = roundTo((w / p) * 100, 2);
+        }
+        render('waiver');
+      }
+
+      // =========================================================================
+      // RENDERING
+      // =========================================================================
+
+      function render(source = 'all') {
+        const p = state.principal;
+        const d = state.discountPct;
+        const f = state.finalAmount;
+        const w = state.waiverAmount;
+
+        // 1. Update inputs (skip the field currently being typed into so cursor doesn't jump)
+        if (source !== 'principal') {
+          el.principalInput.value = p === 0 ? '' : roundTo(p, 2);
+        }
+        if (source !== 'discount') {
+          el.discountInput.value = roundTo(d, 2);
+        }
+        if (source !== 'slider') {
+          el.discountSlider.value = Math.min(100, Math.max(0, d));
+        }
+        if (source !== 'final') {
+          el.finalInput.value = roundTo(f, 2);
+        }
+        if (source !== 'waiver') {
+          el.waiverInput.value = roundTo(w, 2);
+        }
+
+        // Update range slider fill track gradient
+        const clampedPct = Math.min(100, Math.max(0, d));
+        el.discountSlider.style.background = `linear-gradient(to right, #0f766e 0%, #0f766e ${clampedPct}%, #e2e8f0 ${clampedPct}%, #e2e8f0 100%)`;
+
+        // 2. Formatted Indian currency helpers
+        el.principalFormatted.textContent = formatINR(p);
+        el.finalFormatted.textContent = formatINR(f);
+        el.waiverFormatted.textContent = `${formatINR(w)} saved`;
+
+        // 3. Status / Warning badge (exceeds principal or zero principal)
+        if (p <= 0) {
+          showStatusBadge('Enter principal amount', 'neutral');
+        } else if (f > p) {
+          const excess = f - p;
+          showStatusBadge(`Exceeds principal by ${formatINR(excess)} (0% waiver)`, 'warning');
+        } else if (w > p) {
+          showStatusBadge('Waiver exceeds principal (capped at 100%)', 'warning');
+        } else {
+          hideStatusBadge();
+        }
+
+        // 4. Visual breakdown bar
+        const payablePct = roundTo(100 - clampedPct, 1);
+        const waiverPctDisplay = roundTo(clampedPct, 1);
+        el.barPayable.style.width = `${payablePct}%`;
+        el.barWaiver.style.width = `${waiverPctDisplay}%`;
+        el.labelPayablePct.textContent = `${payablePct}%`;
+        el.labelWaiverPct.textContent = `${waiverPctDisplay}%`;
+
+        // 5. Part-payment summary
+        renderPartPayment();
+
+        // 6. Reference table (10% to 90%)
+        renderReferenceTable();
+      }
+
+      function showStatusBadge(text, tone) {
+        el.statusBadge.textContent = text;
+        el.statusBadge.classList.remove(
+          'hidden',
+          'bg-amber-50',
+          'text-amber-800',
+          'border',
+          'border-amber-200',
+          'bg-slate-100',
+          'text-slate-600'
+        );
+        if (tone === 'warning') {
+          el.statusBadge.classList.add('bg-amber-50', 'text-amber-800', 'border', 'border-amber-200');
+        } else {
+          el.statusBadge.classList.add('bg-slate-100', 'text-slate-600');
+        }
+      }
+
+      function hideStatusBadge() {
+        el.statusBadge.classList.add('hidden');
+      }
+
+      function renderPartPayment() {
+        const parts = state.parts;
+        const finalAmt = state.finalAmount;
+
+        if (parts === 1) {
+          el.partSummary.innerHTML = `${formatINR(finalAmt)} <span class="text-xs font-normal text-slate-500">one-time lump sum</span>`;
+        } else {
+          const perPart = finalAmt / parts;
+          el.partSummary.innerHTML = `${formatINR(perPart)} <span class="text-xs font-normal text-slate-500">/ month &times; ${parts} parts</span>`;
+        }
+
+        el.partButtons.forEach((btn) => {
+          const isSelected = Number(btn.dataset.parts) === parts;
+          if (isSelected) {
+            btn.classList.add('bg-white', 'text-slate-900', 'shadow-sm', 'font-semibold');
+            btn.classList.remove('text-slate-600', 'font-medium');
+          } else {
+            btn.classList.remove('bg-white', 'text-slate-900', 'shadow-sm', 'font-semibold');
+            btn.classList.add('text-slate-600', 'font-medium');
+          }
+        });
+      }
+
+      function renderReferenceTable() {
+        const p = Math.max(0, state.principal);
+        const currentDiscount = state.discountPct;
+        const exceedsPrincipal = state.finalAmount > p && p > 0;
+
+        const rowsHtml = REFERENCE_PERCENTS.map((pct) => {
+          const waiver = (p * pct) / 100;
+          const payable = p - waiver;
+          // Highlight row if current discount matches within 0.05% tolerance
+          const isActive = !exceedsPrincipal && p > 0 && Math.abs(currentDiscount - pct) < 0.05;
+
+          const rowClasses = isActive
+            ? 'bg-teal-50/90 text-teal-950 font-semibold cursor-pointer transition'
+            : 'hover:bg-slate-50 text-slate-700 cursor-pointer transition';
+
+          const badgeClasses = isActive
+            ? 'bg-teal-700 text-white'
+            : 'bg-slate-100 text-slate-700 group-hover:bg-slate-200/80';
+
+          return `
+            <tr data-row-pct="${pct}" class="group ${rowClasses}" tabindex="0" role="button" aria-label="Apply ${pct}% discount">
+              <td class="py-3 pl-5 pr-2">
+                <span class="inline-flex items-center justify-center min-w-[3.2rem] px-2 py-0.5 rounded-md text-xs font-semibold ${badgeClasses} transition">
+                  ${pct}%
+                </span>
+              </td>
+              <td class="py-3 px-2 text-right ${isActive ? 'text-teal-800' : 'text-teal-700'}">
+                ${formatINR(waiver)}
+              </td>
+              <td class="py-3 pl-2 pr-5 text-right ${isActive ? 'text-slate-950 font-bold' : 'text-slate-900 font-medium'}">
+                ${formatINR(payable)}
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        el.tableBody.innerHTML = rowsHtml;
+      }
+
+      // =========================================================================
+      // CLIPBOARD & TOAST UTILITIES
+      // =========================================================================
+      let toastTimer = null;
+
+      function showToast(message) {
+        el.toastMessage.textContent = message;
+        el.toast.classList.remove('opacity-0', 'translate-y-2');
+        el.toast.classList.add('opacity-100', 'translate-y-0');
+
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          el.toast.classList.remove('opacity-100', 'translate-y-0');
+          el.toast.classList.add('opacity-0', 'translate-y-2');
+        }, 2200);
+      }
+
+      function buildQuoteText() {
+        const lines = [
+          'Loan Settlement Quote',
+          '------------------------------',
+          `Principal Outstanding : ${formatINR(state.principal)}`,
+          `Waiver / Discount     : ${roundTo(state.discountPct, 2)}% (${formatINR(state.waiverAmount)})`,
+          `Final Settlement Amt  : ${formatINR(state.finalAmount)}`
+        ];
+
+        if (state.parts > 1) {
+          const perPart = state.finalAmount / state.parts;
+          lines.push(`Payment Plan          : ${state.parts} monthly parts of ${formatINR(perPart)}/mo`);
+        } else {
+          lines.push('Payment Plan          : One-time Lump Sum');
+        }
+
+        return lines.join('\n');
+      }
+
+      /**
+       * Copies text safely using a temporary textarea and document.execCommand('copy')
+       * so it works reliably inside restricted iframes as well as standard browsers.
+       */
+      function copyQuoteToClipboard() {
+        const quoteText = buildQuoteText();
+        let copied = false;
+
+        try {
+          const textarea = document.createElement('textarea');
+          textarea.value = quoteText;
+          textarea.setAttribute('readonly', '');
+          textarea.style.position = 'fixed';
+          textarea.style.top = '-9999px';
+          textarea.style.left = '-9999px';
+          document.body.appendChild(textarea);
+          textarea.select();
+          textarea.setSelectionRange(0, textarea.value.length);
+          copied = document.execCommand('copy');
+          document.body.removeChild(textarea);
+        } catch (err) {
+          copied = false;
+        }
+
+        if (copied) {
+          el.copyLabel.textContent = 'Copied!';
+          el.iconCopy.classList.add('hidden');
+          el.iconCheck.classList.remove('hidden');
+          showToast('Settlement quote copied to clipboard');
+
+          setTimeout(() => {
+            el.copyLabel.textContent = 'Copy Quote';
+            el.iconCopy.classList.remove('hidden');
+            el.iconCheck.classList.add('hidden');
+          }, 1800);
+        } else {
+          showToast('Unable to copy automatically');
+        }
+      }
+
+      // =========================================================================
+      // EVENT LISTENERS
+      // =========================================================================
+
+      // Principal Outstanding changed -> keep Discount % fixed, recalculate everything
+      el.principalInput.addEventListener('input', (e) => {
+        state.principal = parseNumericInput(e.target.value);
+        syncFromDiscount('principal');
+      });
+
+      // Discount % numeric input changed
+      el.discountInput.addEventListener('input', (e) => {
+        let val = parseNumericInput(e.target.value);
+        if (val > 100) val = 100;
+        state.discountPct = val;
+        syncFromDiscount('discount');
+      });
+
+      // Discount % slider dragged
+      el.discountSlider.addEventListener('input', (e) => {
+        state.discountPct = parseNumericInput(e.target.value);
+        syncFromDiscount('slider');
+      });
+
+      // Final Settlement Amount (Customer's Willingness to Pay) changed
+      el.finalInput.addEventListener('input', (e) => {
+        state.finalAmount = parseNumericInput(e.target.value);
+        syncFromFinal();
+      });
+
+      // Waiver Amount changed
+      el.waiverInput.addEventListener('input', (e) => {
+        state.waiverAmount = parseNumericInput(e.target.value);
+        syncFromWaiver();
+      });
+
+      // Quick Principal Preset Chips
+      el.presetChips.forEach((chip) => {
+        chip.addEventListener('click', () => {
+          state.principal = Number(chip.dataset.preset) || 0;
+          syncFromDiscount('all');
+        });
+      });
+
+      // Part-payment selector buttons
+      el.partButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.parts = Number(btn.dataset.parts) || 1;
+          renderPartPayment();
+        });
+      });
+
+      // Reference Table row click / keyboard enter
+      function applyRowDiscount(rowEl) {
+        if (!rowEl) return;
+        const pct = Number(rowEl.dataset.rowPct);
+        if (Number.isFinite(pct)) {
+          state.discountPct = pct;
+          syncFromDiscount('all');
+        }
+      }
+
+      el.tableBody.addEventListener('click', (e) => {
+        const row = e.target.closest('tr[data-row-pct]');
+        applyRowDiscount(row);
+      });
+
+      el.tableBody.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          const row = e.target.closest('tr[data-row-pct]');
+          if (row) {
+            e.preventDefault();
+            applyRowDiscount(row);
+          }
+        }
+      });
+
+      // Reset Button
+      el.btnReset.addEventListener('click', () => {
+        Object.assign(state, DEFAULT_STATE);
+        render('all');
+        showToast('Calculator reset to defaults');
+      });
+
+      // Copy Quote Button
+      el.btnCopy.addEventListener('click', copyQuoteToClipboard);
+
+      // =========================================================================
+      // INITIAL RENDER
+      // =========================================================================
+      render('all');
+    })();
+  </script>
+</body>
+</html>
